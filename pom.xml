@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
+    <version>3.4.5</version> <!-- Consider aligning with Keycloak's supported Spring Boot version if issues arise -->
         <relativePath/> </parent>
     <groupId>com.example</groupId>
     <artifactId>keycloak</artifactId>
@@ -25,43 +25,79 @@
         <tag/>
         <url/>
     </scm>
-    <packaging>jar</packaging> <properties>
-    <java.version>17</java.version>
-</properties>
+    <packaging>jar</packaging>
+    <properties>
+        <java.version>17</java.version>
+        <keycloak.version>22.0.5</keycloak.version> <!-- Define Keycloak version as a property -->
+        <junit.jupiter.version>5.10.0</junit.jupiter.version>
+        <mockito.version>5.10.0</mockito.version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-            <scope>provided</scope> </dependency>
+            <scope>provided</scope>
+        </dependency>
 
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Boot Test - keep it if other tests rely on it, ensure JUnit 5 is primary -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
+
+        <!-- Keycloak Dependencies -->
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
+            <version>${keycloak.version}</version>
             <scope>provided</scope>
-            <version>21.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi</artifactId>
+            <version>${keycloak.version}</version>
             <scope>provided</scope>
-            <version>21.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi-private</artifactId>
+            <version>${keycloak.version}</version>
             <scope>provided</scope>
-            <version>21.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-services</artifactId>
+            <version>${keycloak.version}</version>
             <scope>provided</scope>
-            <version>21.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>

@@ -1,1 +1,2 @@
 com.example.keycloak.CustomProtocolMapper
+com.example.keycloak.CustomUserDataMapperFactory
