@@ -1,12 +1,10 @@
 package com.example.keycloak;
 
-import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
-import org.keycloak.protocol.oidc.mappers.OIDCIDTokenMapper;
-import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
+import org.keycloak.models.ClientSessionContext;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.ProtocolMapperModel;
 import org.keycloak.models.UserSessionModel;
-import org.keycloak.protocol.oidc.mappers.AbstractOIDCProtocolMapper;
-import org.keycloak.protocol.oidc.mappers.OIDCIDTokenMapper;
-import org.keycloak.protocol.oidc.mappers.UserInfoTokenMapper;
+import org.keycloak.protocol.oidc.mappers.*;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.IDToken;
 
@@ -14,96 +12,65 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
-public class CustomUserDataMapper extends AbstractOIDCProtocolMapper implements OIDCIDTokenMapper, UserInfoTokenMapper {
+public class CustomUserDataMapper extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper,
+        OIDCIDTokenMapper, UserInfoTokenMapper {
 
-    private static final String USER_PROFILE_CLAIM_NAME = "user_profile";
+    public static final String PROVIDER_ID = "custom-protocol-mapper";
 
-    // Inner class for User Data Transfer Object
-    public static class UserDTO {
-        private String id;
-        private String username;
-        private String email;
+    private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
+    private static final Random random = new Random();
+    private static final String[] NAMES = {"John", "Emma", "Michael", "Sophia", "William", "Olivia"};
+    private static final String[] LASTNAMES = {"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia"};
+    private static final String[] COUNTRIES = {"USA", "Canada", "UK", "Australia", "Germany", "France"};
 
-        public UserDTO(String id, String username, String email) {
-            this.id = id;
-            this.username = username;
-            this.email = email;
-        }
-
-        // Getters and setters (optional, but good practice)
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
+    static {
+        OIDCAttributeMapperHelper.addTokenClaimNameConfig(configProperties);
+        OIDCAttributeMapperHelper.addIncludeInTokensConfig(configProperties, CustomUserDataMapper.class);
     }
-
-
-    // Placeholder for fetching user data and adding it to the token
 
     @Override
     public String getDisplayCategory() {
-        return "Token mapper";
+        return "Token Mapper";
     }
 
     @Override
     public String getDisplayType() {
-        return "Custom User Data Mapper";
+        return "Custom Token Mapper";
     }
 
     @Override
     public String getHelpText() {
-        return "Adds custom user data to the token";
+        return "Adds random user details (name, lastname, country) to the claim";
     }
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return new ArrayList<>();
+        return configProperties;
     }
 
     @Override
     public String getId() {
-        return "custom-user-data-mapper";
+        return PROVIDER_ID;
     }
 
     @Override
-    public IDToken transformIdToken(IDToken token, UserSessionModel userSession) {
-        String userId = userSession.getUser().getId(); // Extract user ID
+    protected void setClaim(IDToken token, ProtocolMapperModel mappingModel,
+                            UserSessionModel userSession, KeycloakSession keycloakSession,
+                            ClientSessionContext clientSessionCtx) {
 
-        // Simulate fetching user data from a repository
-        // In a real scenario, this would involve a database call or API request
-        // UserDTO userProfile = userRepository.findById(userId);
-        UserDTO userProfile = new UserDTO(userId, "user_" + userId, userId + "@example.com");
+        // Create a userDTO with random values
+        Map<String, String> userDTO = new HashMap<>();
+        userDTO.put("name", getRandomValue(NAMES));
+        userDTO.put("lastname", getRandomValue(LASTNAMES));
+        userDTO.put("country", getRandomValue(COUNTRIES));
 
-        // Add custom claim to the token
-        Map<String, Object> claims = token.getOtherClaims();
-        if (claims == null) {
-            claims = new HashMap<>();
-        }
-        claims.put(USER_PROFILE_CLAIM_NAME, userProfile);
-        token.setOtherClaims(claims);
-
-        return token;
+        // Map the userDTO to the claim
+        OIDCAttributeMapperHelper.mapClaim(token, mappingModel, userDTO);
     }
 
-    @Override
-    public IDToken transformUserInfoToken(IDToken token, UserSessionModel userSession) {
-        String userId = userSession.getUser().getId(); // Extract user ID
-
-        // Simulate fetching user data from a repository
-        // In a real scenario, this would involve a database call or API request
-        // UserDTO userProfile = userRepository.findById(userId);
-        UserDTO userProfile = new UserDTO(userId, "user_" + userId, userId + "@example.com");
-
-        // Add custom claim to the token
-        Map<String, Object> claims = token.getOtherClaims();
-        if (claims == null) {
-            claims = new HashMap<>();
-        }
-        claims.put(USER_PROFILE_CLAIM_NAME, userProfile);
-        token.setOtherClaims(claims);
-        return token;
+    private String getRandomValue(String[] array) {
+        return array[random.nextInt(array.length)];
     }
 }
