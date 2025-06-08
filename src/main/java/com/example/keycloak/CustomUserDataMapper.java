@@ -1,5 +1,7 @@
 package com.example.keycloak;
 
+import com.example.keycloak.entity.User;
+import com.example.keycloak.repositories.UserRepository;
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ProtocolMapperModel;
@@ -7,23 +9,27 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.oidc.mappers.*;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.IDToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
-public class CustomUserDataMapper extends AbstractOIDCProtocolMapper implements OIDCAccessTokenMapper,
-        OIDCIDTokenMapper, UserInfoTokenMapper {
+public class CustomUserDataMapper extends AbstractOIDCProtocolMapper
+        implements OIDCAccessTokenMapper, OIDCIDTokenMapper, UserInfoTokenMapper {
 
+    private static final Logger logger = LoggerFactory.getLogger(CustomUserDataMapper.class);
     public static final String PROVIDER_ID = "custom-protocol-mapper";
+    public static final String DISPLAY_TYPE = "Custom Token Mapper";
+    public static final String DISPLAY_CATEGORY = "Token Mapper";
+    public static final String HELP_TEXT = "Adds user details (name, lastname, country) to the claim";
 
+    private static final String USER_DTO_CLAIM = "userDTO";
+    private static final String NAME_CLAIM = "name";
+    private static final String LASTNAME_CLAIM = "lastname";
+    private static final String COUNTRY_CLAIM = "country";
+
+    private static final UserRepository userRepository = new UserRepository();
     private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
-    private static final Random random = new Random();
-    private static final String[] NAMES = {"John", "Emma", "Michael", "Sophia", "William", "Olivia"};
-    private static final String[] LASTNAMES = {"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia"};
-    private static final String[] COUNTRIES = {"USA", "Canada", "UK", "Australia", "Germany", "France"};
 
     static {
         OIDCAttributeMapperHelper.addTokenClaimNameConfig(configProperties);
@@ -32,22 +38,22 @@ public class CustomUserDataMapper extends AbstractOIDCProtocolMapper implements 
 
     @Override
     public String getDisplayCategory() {
-        return "Token Mapper";
+        return DISPLAY_CATEGORY;
     }
 
     @Override
     public String getDisplayType() {
-        return "Custom Token Mapper";
+        return DISPLAY_TYPE;
     }
 
     @Override
     public String getHelpText() {
-        return "Adds random user details (name, lastname, country) to the claim";
+        return HELP_TEXT;
     }
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return configProperties;
+        return Collections.unmodifiableList(configProperties);
     }
 
     @Override
@@ -60,17 +66,28 @@ public class CustomUserDataMapper extends AbstractOIDCProtocolMapper implements 
                             UserSessionModel userSession, KeycloakSession keycloakSession,
                             ClientSessionContext clientSessionCtx) {
 
-        // Create a userDTO with random values
-        Map<String, String> userDTO = new HashMap<>();
-        userDTO.put("name", getRandomValue(NAMES));
-        userDTO.put("lastname", getRandomValue(LASTNAMES));
-        userDTO.put("country", getRandomValue(COUNTRIES));
+        String lastName = userSession.getUser().getLastName();
+        logger.debug("Attempting to map claims for user with last name: {}", lastName);
 
-        // Map the userDTO to the claim
-        OIDCAttributeMapperHelper.mapClaim(token, mappingModel, userDTO);
+        userRepository.findByLastName(lastName).ifPresent(user -> {
+            logUserDetails(user);
+            addUserClaimsToToken(token, user);
+        });
     }
 
-    private String getRandomValue(String[] array) {
-        return array[random.nextInt(array.length)];
+    private void logUserDetails(User user) {
+        logger.debug("Mapping user details - firstName: {}, lastName: {}, country: {}",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getCountry());
+    }
+
+    private void addUserClaimsToToken(IDToken token, User user) {
+        Map<String, Object> userClaims = new HashMap<>();
+        userClaims.put(NAME_CLAIM, user.getFirstName());
+        userClaims.put(LASTNAME_CLAIM, user.getLastName());
+        userClaims.put(COUNTRY_CLAIM, user.getCountry());
+
+        token.getOtherClaims().put(USER_DTO_CLAIM, Collections.unmodifiableMap(userClaims));
     }
 }
